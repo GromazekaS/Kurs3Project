@@ -126,7 +126,18 @@ def brief_info(data: pd) -> list[dict]:
 
 
 def top_five_transactions(data: pd) -> list[dict]:
-    return []
+    top_5_expenses = data.sort_values(by="Сумма платежа", ascending=False).head(5)
+    result = []
+    for i in range(len(top_5_expenses)):
+        print(top_5_expenses.iloc[i])
+        row = {
+            "date": top_5_expenses.iloc[i]["Дата платежа"],
+            "amount": float(top_5_expenses.iloc[i]["Сумма платежа"]),
+            "category": top_5_expenses.iloc[i]["Категория"],
+            "description": top_5_expenses.iloc[i]["Описание"]
+        }
+        result.append(row)
+    return result
 
 
 def get_currency_rates(user_currencies: list) -> list[dict]:
