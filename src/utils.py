@@ -1,17 +1,18 @@
 import csv
 import json
+import datetime
 
 import pandas as pd
+from pandas.core.interchange.dataframe_protocol import DataFrame
 
 from src.logger import logger_setup
 
-# from pprint import pprint
+from pprint import pprint
 
 
 logger = logger_setup("utils")
 
-
-def get_transactions_from_file(path: str) -> list[dict]:
+def get_transactions_from_jsonfile(path: str) -> list[dict]:
     """Прочитать json-файл по указанному пути, вернуть список транзакций"""
     # Если try не выполнится, функция вернет пустой список
     data = []
@@ -22,12 +23,12 @@ def get_transactions_from_file(path: str) -> list[dict]:
             data = json.load(json_file)
 
         # Проверка структуры данных
-        logger.info("Проверяем структуру считанных данных в файле")
-        if isinstance(data, list) and all(isinstance(item, dict) for item in data):
-            logger.info("Успешно загружено {} записей".format(len(data)))
-        else:
-            logger.warning("Файл имеет некорректную структуру")
-            data = []
+        # logger.info("Проверяем структуру считанных данных в файле")
+        # if isinstance(data, list) and all(isinstance(item, dict) for item in data):
+        #     logger.info("Успешно загружено {} записей".format(len(data)))
+        # else:
+        #     logger.warning("Файл имеет некорректную структуру")
+        #     data = []
 
     except FileNotFoundError:
         logger.error("Файл не найден")
@@ -39,82 +40,130 @@ def get_transactions_from_file(path: str) -> list[dict]:
     return data
 
 
-def get_transactions_from_csv_file(path: str, delimiter: str = ",") -> list[dict]:
-    """Прочитать csv-файл по указанному пути, вернуть список транзакций"""
-    # Если try не выполнится, функция вернет пустой список
-    result_list = []
-    try:
-        # Пробуем открыть файл
-        logger.info(f"Считываем файл csv {path}")
-        inside_fields = ["amount", "currency_code", "currency_name"]
-        with open(path, encoding="utf-8") as csv_file:
-            csv_data = csv.reader(csv_file, delimiter=delimiter)
-            headers = next(csv_data)
-            # print(type(csv_data))
-            for line in csv_data:
-                transaction: dict = {"operationAmount": {"currency": {}}}
-                for i in range(len(headers)):
-                    if headers[i] in inside_fields:
-                        if headers[i] == "amount":
-                            transaction["operationAmount"][headers[i]] = line[i]
-                        else:
-                            transaction["operationAmount"]["currency"][headers[i].split("_")[-1]] = line[i]
-                    else:
-                        transaction[headers[i]] = line[i]
-                result_list.append(transaction)
-        logger.info(f"Считано {len(result_list)} записей")
-    except FileNotFoundError:
-        logger.error("Файл не найден")
-    except Exception as e:
-        logger.error(f"Произошла ошибка: {str(e)}")
-    logger.info("Завершение обработки файла")
-    return result_list
-
-
-def get_transactions_from_excel_file(path: str) -> list[dict]:
+def get_transactions_from_excel_file(path: str) -> DataFrame:
     """Прочитать excel-файл по указанному пути, вернуть список транзакций"""
     # Если try не выполнится, функция вернет пустой список
-    result_list = []
+    # result_list = []
+    excel_data = pd
     try:
         # Пробуем открыть файл
         logger.info(f"Считываем файл excel {path}")
         excel_data = pd.read_excel(path, dtype=str)
 
-        # Преобразуем считанные линейные данные в привычную структуру transaction
-        inside_fields = ["amount", "currency_code", "currency_name"]
-        for i in range(excel_data.shape[0]):
-            transaction: dict = {"operationAmount": {"currency": {}}}
-            for k in excel_data.iloc[0].keys():
-                if k in inside_fields:
-                    if k == "amount":
-                        transaction["operationAmount"][k] = excel_data.loc[i, k]
-                    else:
-                        transaction["operationAmount"]["currency"][k.split("_")[-1]] = excel_data.loc[i, k]
-                else:
-                    transaction[k] = excel_data.loc[i, k]
-            result_list.append(transaction)
+        excel_data["Номер карты"] = (
+            excel_data["Номер карты"]
+            .str.replace("*", "", regex=False)  # Удалить *
+        )
 
-        logger.info(f"Считано {len(result_list)} записей")
+        # Преобразуем считанные строковые данные в дробные
+        excel_data["Сумма операции"] = (
+            excel_data["Сумма операции"]
+            .str.replace(" ", "", regex=False)  # Удалить пробелы
+            .str.replace(",", ".", regex=False)  # Заменить запятые на точки
+            .astype(float)
+        )
+
+        excel_data["Сумма платежа"] = (
+            excel_data["Сумма платежа"]
+            .str.replace(" ", "", regex=False)  # Удалить пробелы
+            .str.replace(",", ".", regex=False)  # Заменить запятые на точки
+            .astype(float)
+        )
+
+        excel_data["Бонусы (включая кэшбэк)"] = (
+            excel_data["Бонусы (включая кэшбэк)"]
+            .str.replace(" ", "", regex=False)  # Удалить пробелы
+            .str.replace(",", ".", regex=False)  # Заменить запятые на точки
+            .astype(float)
+        )
+
+        excel_data["Округление на инвесткопилку"] = (
+            excel_data["Округление на инвесткопилку"]
+            .str.replace(" ", "", regex=False)  # Удалить пробелы
+            .str.replace(",", ".", regex=False)  # Заменить запятые на точки
+            .astype(float)
+        )
+
+        excel_data["Сумма операции с округлением"] = (
+            excel_data["Сумма операции с округлением"]
+            .str.replace(" ", "", regex=False)  # Удалить пробелы
+            .str.replace(",", ".", regex=False)  # Заменить запятые на точки
+            .astype(float)
+        )
+
+        # Преобразуем считанные строковые данные в целые (кэшбэк может быть только целым)
+        excel_data["Кэшбэк"] = pd.to_numeric(excel_data["Кэшбэк"], errors="coerce").fillna(0).astype(int)
+
+        # logger.info(f"Считано {len(result_list)} записей")
     except FileNotFoundError:
         logger.error("Файл не найден")
     except Exception as e:
         logger.error(f"Произошла ошибка: {str(e)}")
     logger.info("Завершение обработки файла")
-    return result_list
+    return excel_data
 
 
-'''
+def greeting() -> str:
+    """Вернуть строку-приветствие в зависимости от текущего локального времени суток"""
+    hour = datetime.datetime.now().hour
+    # print(now.strftime(format="%d-%m-%Y %H:%M::%S"))
+    if hour < 5 or hour > 23: return "Доброй ночи"
+    if hour < 11: return "Доброе утро"
+    if hour < 17: return "Добрый день"
+    return "Добрый вечер"
+
+
+def brief_info(data: pd) -> list[dict]:
+    # Требуется дополнительная фильтрация по неисполненным операциям (FAILED)?
+    result = data.groupby("Номер карты", as_index=False)[["Сумма платежа", "Кэшбэк"]].sum()
+#    print(len(result), type(result))
+    result = result.rename(columns={
+        "Номер карты": "last_digits",
+        "Сумма платежа": "total_spent",
+        "Кэшбэк": "cashback"
+    })
+    return result.to_json(orient="records", force_ascii=False)
+
+
+def top_five_transactions(data: pd) -> list[dict]:
+    return []
+
+
+def get_currency_rates(user_currencies: list) -> list[dict]:
+    print(user_currencies)
+    return []
+
+
+def get_stock_prices(user_stocks: list) -> list[dict]:
+    print(user_stocks)
+    return []
+
+
+def main_page(data: pd, user_config: dict):
+    json_answer = []
+    json_answer= {"greeting" : greeting(),
+                  "cards" : brief_info(data),
+                  "top_transactions" : top_five_transactions(data),
+                  "currency_rates" : get_currency_rates(user_config["user_currencies"]),
+                  "stock_prices" : get_stock_prices(user_config["user_stocks"])
+                  }
+    return json_answer
+
 
 def main():
     """Локальная проверка функций"""
-    file = 'operations.json'
-    filepath = '../data/' + file
-    f = get_transactions_from_file(filepath)
+    user_config_filename = 'user_config.json'
+    datafile = 'operations.xlsx'
+    filepath = '../data/'
+    operations = get_transactions_from_excel_file(filepath+datafile)
+    user_config = get_transactions_from_jsonfile(filepath+user_config_filename)
+    print(user_config)
 
-    # Вызов внешней функции по конвертации валют через сайт
-    result = calculate_transaction_amount(f[41])
-    print(result)
+    # Страница "Главная"
+    main_page_data = main_page(operations, user_config)
+    pprint(main_page_data)
+
 
 
 if __name__ == "__main__":
-    main()'''
+    main()

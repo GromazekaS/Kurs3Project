@@ -136,8 +136,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-skypro
-skypro.pub
+# skypro
+# skypro.pub
 log_widget.txt
 
 # Spyder project settings
