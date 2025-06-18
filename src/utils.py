@@ -113,6 +113,7 @@ def greeting() -> str:
 
 
 def brief_info(data: pd.DataFrame) -> str:
+    """Сбор краткой информации по картам"""
     # Требуется дополнительная фильтрация по неисполненным операциям (FAILED)?
     result = data.groupby("Номер карты", as_index=False)[["Сумма платежа", "Кэшбэк"]].sum()
     result = result.rename(columns={
@@ -124,6 +125,7 @@ def brief_info(data: pd.DataFrame) -> str:
 
 
 def top_five_transactions(data: pd.DataFrame) -> list[dict]:
+    """Выборка топ-5 самых расходных транзакций"""
     top_5_expenses = data.sort_values(by="Сумма платежа", ascending=False).head(5)
     result = []
     for i in range(len(top_5_expenses)):
@@ -138,17 +140,8 @@ def top_five_transactions(data: pd.DataFrame) -> list[dict]:
     return result
 
 
-# def get_currency_rates(user_currencies: list) -> list[dict]:
-#     print(user_currencies)
-#     return []
-#
-#
-# def get_stock_prices(user_stocks: list) -> list[dict]:
-#     print(user_stocks)
-#     return []
-
-
 def main_page(data: DataFrame, user_config: dict):
+    """Сформировать ответ с инфо для передачи на веб-страницу Главная"""
     json_answer= {"greeting" : greeting(),
                   "cards" : brief_info(data),
                   "top_transactions" : top_five_transactions(data),
@@ -160,17 +153,17 @@ def main_page(data: DataFrame, user_config: dict):
 
 def main():
     """Локальная проверка функций"""
-    user_config_filename = 'user_config.json'
-    datafile = 'operations.xlsx'
-    filepath = '../data/'
-    operations = get_transactions_from_excel_file(filepath+datafile)
-    user_config = get_transactions_from_jsonfile(filepath+user_config_filename)
-    # print(user_config)
-
-    # Страница "Главная"
-    main_page_data = main_page(operations, user_config)
-    pprint(main_page_data)
-
+    pass
+    # user_config_filename = 'user_config.json'
+    # datafile = 'operations.xlsx'
+    # filepath = '../data/'
+    # operations = get_transactions_from_excel_file(filepath+datafile)
+    # user_config = get_transactions_from_jsonfile(filepath+user_config_filename)
+    # # print(user_config)
+    #
+    # # Страница "Главная"
+    # main_page_data = main_page(operations, user_config)
+    # pprint(main_page_data)
 
 
 if __name__ == "__main__":

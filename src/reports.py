@@ -13,13 +13,13 @@ from pprint import pprint
 logger = logger_setup("services")
 
 
-def get_expenses_by_category(data: pd.DataFrame,
+def spending_by_category(data: pd.DataFrame,
                              category: str,
                              end_date: Optional[str] = datetime.now()) -> pd.DataFrame:
     """
     Эффективная фильтрация транзакций по категории и трехмесячному периоду.
 
-    :param df: DataFrame с колонками "Категория" и "Дата платежа"
+    :param data: DataFrame с колонками "Категория" и "Дата платежа"
     :param category: Название категории
     :param end_date: Конечная дата (строка или datetime)
     :return: Отфильтрованный DataFrame
@@ -46,7 +46,7 @@ def get_expenses_by_category(data: pd.DataFrame,
 def main() -> None:
     """Локальная проверка работы функций"""
     data = get_transactions_from_excel_file('../data/operations.xlsx')
-    result = get_expenses_by_category(data, "Фастфуд", "31.01.2020")
+    result = spending_by_category(data, "Фастфуд", "31.01.2020")
     print(result[-5::])
 
 
