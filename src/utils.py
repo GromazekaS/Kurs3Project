@@ -1,10 +1,10 @@
-import csv
 import json
 import datetime
 
 import pandas as pd
 from pandas.core.interchange.dataframe_protocol import DataFrame
 
+from src.external_api import get_currencies_rates, get_symbols_rates
 from src.logger import logger_setup
 
 from pprint import pprint
@@ -12,7 +12,7 @@ from pprint import pprint
 
 logger = logger_setup("utils")
 
-def get_transactions_from_jsonfile(path: str) -> list[dict]:
+def get_transactions_from_jsonfile(path: str) -> dict:
     """Прочитать json-файл по указанному пути, вернуть список транзакций"""
     # Если try не выполнится, функция вернет пустой список
     data = []
@@ -40,11 +40,11 @@ def get_transactions_from_jsonfile(path: str) -> list[dict]:
     return data
 
 
-def get_transactions_from_excel_file(path: str) -> DataFrame:
+def get_transactions_from_excel_file(path: str) -> pd.DataFrame:
     """Прочитать excel-файл по указанному пути, вернуть список транзакций"""
     # Если try не выполнится, функция вернет пустой список
     # result_list = []
-    excel_data = pd
+    excel_data = pd.DataFrame()
     try:
         # Пробуем открыть файл
         logger.info(f"Считываем файл excel {path}")
@@ -106,17 +106,15 @@ def get_transactions_from_excel_file(path: str) -> DataFrame:
 def greeting() -> str:
     """Вернуть строку-приветствие в зависимости от текущего локального времени суток"""
     hour = datetime.datetime.now().hour
-    # print(now.strftime(format="%d-%m-%Y %H:%M::%S"))
     if hour < 5 or hour > 23: return "Доброй ночи"
     if hour < 11: return "Доброе утро"
     if hour < 17: return "Добрый день"
     return "Добрый вечер"
 
 
-def brief_info(data: pd) -> list[dict]:
+def brief_info(data: pd.DataFrame) -> str:
     # Требуется дополнительная фильтрация по неисполненным операциям (FAILED)?
     result = data.groupby("Номер карты", as_index=False)[["Сумма платежа", "Кэшбэк"]].sum()
-#    print(len(result), type(result))
     result = result.rename(columns={
         "Номер карты": "last_digits",
         "Сумма платежа": "total_spent",
@@ -125,11 +123,11 @@ def brief_info(data: pd) -> list[dict]:
     return result.to_json(orient="records", force_ascii=False)
 
 
-def top_five_transactions(data: pd) -> list[dict]:
+def top_five_transactions(data: pd.DataFrame) -> list[dict]:
     top_5_expenses = data.sort_values(by="Сумма платежа", ascending=False).head(5)
     result = []
     for i in range(len(top_5_expenses)):
-        print(top_5_expenses.iloc[i])
+        # print(top_5_expenses.iloc[i])
         row = {
             "date": top_5_expenses.iloc[i]["Дата платежа"],
             "amount": float(top_5_expenses.iloc[i]["Сумма платежа"]),
@@ -140,23 +138,22 @@ def top_five_transactions(data: pd) -> list[dict]:
     return result
 
 
-def get_currency_rates(user_currencies: list) -> list[dict]:
-    print(user_currencies)
-    return []
+# def get_currency_rates(user_currencies: list) -> list[dict]:
+#     print(user_currencies)
+#     return []
+#
+#
+# def get_stock_prices(user_stocks: list) -> list[dict]:
+#     print(user_stocks)
+#     return []
 
 
-def get_stock_prices(user_stocks: list) -> list[dict]:
-    print(user_stocks)
-    return []
-
-
-def main_page(data: pd, user_config: dict):
-    json_answer = []
+def main_page(data: DataFrame, user_config: dict):
     json_answer= {"greeting" : greeting(),
                   "cards" : brief_info(data),
                   "top_transactions" : top_five_transactions(data),
-                  "currency_rates" : get_currency_rates(user_config["user_currencies"]),
-                  "stock_prices" : get_stock_prices(user_config["user_stocks"])
+                  "currency_rates" : get_currencies_rates(",".join(user_config["user_currencies"])),
+                  "stock_prices" : get_symbols_rates(",".join(user_config["user_stocks"]))
                   }
     return json_answer
 
@@ -168,7 +165,7 @@ def main():
     filepath = '../data/'
     operations = get_transactions_from_excel_file(filepath+datafile)
     user_config = get_transactions_from_jsonfile(filepath+user_config_filename)
-    print(user_config)
+    # print(user_config)
 
     # Страница "Главная"
     main_page_data = main_page(operations, user_config)
