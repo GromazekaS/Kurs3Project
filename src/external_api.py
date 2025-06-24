@@ -24,15 +24,15 @@ def get_currencies_rates(currency: str) -> dict:
     payload: dict[str, str] = {}
 
     # API запрос
-    # response = requests.request("GET", url, headers=headers, data=payload)
-    # status_code = response.status_code
-    # print(f"Статус запроса курса конвертации: {status_code}")
+    response = requests.request("GET", url, headers=headers, data=payload)
+    status_code = response.status_code
+    print(f"Статус запроса курса конвертации: {status_code}")
 
     # Имитация запроса по API
-    response = currencies_vs_usd
+    # result = currencies_vs_usd
 
-    # result = response.json()
-    result = currencies_vs_usd
+    result = response.json()
+
     # pprint(result)
     result = {'RUBUSD': result['quotes']['USDRUB'],
               'RUBEUR': round(result['quotes']['USDRUB']/result['quotes']['USDEUR'], 2)
@@ -55,16 +55,16 @@ def get_symbols_rates(symbol: str) -> list:
     payload: dict[str, str] = {}
 
     # API запрос
-    # response = requests.request("GET", url)
-    # status_code = response.status_code
-    # print(f"Статус запроса курса конвертации: {status_code}")
+    response = requests.request("GET", url)
+    status_code = response.status_code
+    print(f"Статус запроса курса конвертации: {status_code}")
 
     # Имитация запроса по API
-    response = stocks_from_user_list
+    # response = stocks_from_user_list
+    # result = stocks_from_user_list
 
+    result = response.json()
 
-    # result = response.json()
-    result = stocks_from_user_list
     # pprint(result)
     stocks = []
     for stock in result['data']:
