@@ -6,19 +6,19 @@ import pandas as pd
 import pytest
 from pandas import DataFrame
 
-from src.utils import get_transactions_from_csv_file, get_transactions_from_excel_file, get_transactions_from_file
+from src.utils import get_transactions_from_excel_file, get_transactions_from_jsonfile
 
 
 def test_get_transactions_from_valid_file(transactions_test: list[dict[str, Any]]) -> None:
     mock_data = json.dumps(transactions_test)
     with patch("builtins.open", mock_open(read_data=mock_data)):
-        result = get_transactions_from_file("dummy_path.json")
+        result = get_transactions_from_jsonfile("dummy_path.json")
         assert result == transactions_test
 
 
 def test_get_transactions_file_not_found() -> None:
     with patch("builtins.open", side_effect=FileNotFoundError()):
-        result = get_transactions_from_file("not_found.json")
+        result = get_transactions_from_jsonfile("not_found.json")
         assert result == []
 
 
@@ -27,14 +27,14 @@ def test_get_transactions_invalid_json() -> None:
         patch("builtins.open", mock_open(read_data="INVALID_JSON")),
         patch("json.load", side_effect=json.JSONDecodeError("msg", "", 0)),
     ):
-        result = get_transactions_from_file("invalid.json")
+        result = get_transactions_from_jsonfile("invalid.json")
         assert result == []
 
 
 def test_get_transactions_invalid_structure() -> None:
     bad_structure = json.dumps({"not": "a list"})
     with patch("builtins.open", mock_open(read_data=bad_structure)):
-        result = get_transactions_from_file("bad_struct.json")
+        result = get_transactions_from_jsonfile("bad_struct.json")
         assert result == []
 
 
@@ -65,35 +65,6 @@ def mock_csv_data() -> list[list[str]]:
             "Перевод с карты на карту",
         ],
     ]
-
-
-@patch("src.utils.csv.reader")
-@patch("builtins.open", new_callable=mock_open)
-def test_get_transactions_from_csv_file_success(
-    mock_open_file: MagicMock, mock_read_csv: MagicMock, mock_csv_data: list[list[str]]
-) -> None:
-    mock_read_csv.return_value = iter(mock_csv_data)
-    print(mock_csv_data)
-
-    result = get_transactions_from_csv_file("fake_path.csv")
-    assert len(result) == 2
-    assert result[0]["id"] == "650703"
-    assert result[0]["state"] == "EXECUTED"
-    assert result[0]["date"] == "2023-09-05T11:30:32Z"
-    assert result[0]["operationAmount"]["amount"] == "16210"
-    assert result[0]["operationAmount"]["currency"]["code"] == "Sol"
-    assert result[0]["operationAmount"]["currency"]["name"] == "PEN"
-    assert result[0]["from"] == "Счет 58803664561298323391"
-    assert result[0]["to"] == "Счет 39745660563456619397"
-    assert result[0]["description"] == "Перевод организации"
-
-
-@patch("src.utils.logger")
-@patch("src.utils.csv.reader", side_effect=FileNotFoundError)
-def test_get_transactions_from_csv_file_file_not_found(mock_read_csv: list[list[str]], mock_logger: MagicMock) -> None:
-    result = get_transactions_from_csv_file("nonexistent_file.xlsx")
-    assert result == []
-    mock_logger.error.assert_called_with("Файл не найден")
 
 
 @pytest.fixture

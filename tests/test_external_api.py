@@ -1,13 +1,13 @@
 import os
 from unittest.mock import MagicMock, Mock, patch
 
-from src.external_api import calculate_transaction_amount, convert_currency
+from src.external_api import get_symbols_rates, get_currencies_rates
 
 
 @patch("requests.request")
 # @patch('os.getenv')
 # def test_convert_currency(mock_getenv, mock_request):
-def test_convert_currency(mock_request: MagicMock) -> None:
+def test_get_symbols_rates(mock_request: MagicMock) -> None:
     mock_request.return_value.json.return_value = {
         "success": True,
         "query": {"from": "EUR", "to": "RUB", "amount": 100},
@@ -27,13 +27,7 @@ def test_convert_currency(mock_request: MagicMock) -> None:
 
 
 test = {
-    "id": 41428829,
-    "state": "EXECUTED",
-    "date": "2019-07-03T18:35:29.512364",
-    "operationAmount": {"amount": "8221.37", "currency": {"name": "USD", "code": "USD"}},
-    "description": "Перевод организации",
-    "from": "MasterCard 7158300734726758",
-    "to": "Счет 35383033474447895560",
+
 }
 
 

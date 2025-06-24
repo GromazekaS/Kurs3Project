@@ -29,7 +29,7 @@ def main() -> None:
     #  'Книги', 'Отели', 'Кино', 'Спорттовары', 'Автоуслуги', 'Зарплата', 'Финансы', 'Искусство', 'Duty Free']
     category = "Фастфуд"
     date = "31.01.2020"
-    print(spending_by_category(operations, category, date))
+    print(spending_by_category(operations, category, date).to_dict(orient="records"))
 
 
 if __name__ == "__main__":

@@ -94,7 +94,7 @@ def get_transactions_from_excel_file(path: str) -> pd.DataFrame:
         # Преобразуем считанные строковые данные в целые (кэшбэк может быть только целым)
         excel_data["Кэшбэк"] = pd.to_numeric(excel_data["Кэшбэк"], errors="coerce").fillna(0).astype(int)
 
-        # logger.info(f"Считано {len(result_list)} записей")
+        logger.info(f"Считано {len(excel_data)} записей")
     except FileNotFoundError:
         logger.error("Файл не найден")
     except Exception as e:
@@ -153,17 +153,17 @@ def main_page(data: DataFrame, user_config: dict):
 
 def main():
     """Локальная проверка функций"""
-    pass
-    # user_config_filename = 'user_config.json'
-    # datafile = 'operations.xlsx'
-    # filepath = '../data/'
-    # operations = get_transactions_from_excel_file(filepath+datafile)
-    # user_config = get_transactions_from_jsonfile(filepath+user_config_filename)
-    # # print(user_config)
-    #
-    # # Страница "Главная"
-    # main_page_data = main_page(operations, user_config)
-    # pprint(main_page_data)
+    # pass
+    user_config_filename = 'user_config.json'
+    datafile = 'operations_test.xlsx'
+    filepath = '../tests/'
+    operations = get_transactions_from_excel_file(filepath + datafile)
+    user_config = get_transactions_from_jsonfile('../data/' + user_config_filename)
+    # print(user_config)
+
+    # Страница "Главная"
+    main_page_data = main_page(operations, user_config)
+    pprint(main_page_data)
 
 
 if __name__ == "__main__":
