@@ -1,49 +1,77 @@
-import pytest
-from _pytest.capture import CaptureFixture
+import unittest
+from unittest.mock import patch, MagicMock
 
-from src.decorators import log
-from src.widget import get_date
+import os
+import pandas as pd
+from datetime import datetime
+from src.decorators import export_to_excel, default_export_to_excel  # замени на свой модуль
 
+class TestExportDecorators(unittest.TestCase):
 
-def test_log(capsys: CaptureFixture[str]) -> None:
-    get_date("2024-03-11T02:26:18.671407")
-    captured = capsys.readouterr()
-    assert captured.out.split("\n")[0] == "get_date успешно завершена. Результат: 11.03.2024"
+    def setUp(self):
+        self.df = pd.DataFrame({"Категория": ["Тест"], "Дата платежа": ["01.01.2021"]})
 
+    @patch("src.decorators.os.makedirs")
+    @patch("src.decorators.pd.DataFrame.to_excel")
+    @patch("src.decorators.logger")
+    def test_export_to_excel_decorator_with_str_date(self, mock_logger, mock_to_excel, mock_makedirs):
+        @export_to_excel("../test_reports")
+        def dummy_func(data, category, end_date=None):
+            return data
 
-def test_console_logging(capsys: CaptureFixture[str]) -> None:
-    @log()
-    def test_func(x: int) -> int:
-        return x * 2
+        category = "Тест Категория"
+        end_date = "15.03.2021"
 
-    test_func(5)
-    captured = capsys.readouterr()
-    assert "test_func успешно завершена. Результат: 10" in captured.out
+        result = dummy_func(self.df, category, end_date)
 
+        # Проверки
+        mock_makedirs.assert_called_once_with("../test_reports", exist_ok=True)
+        mock_to_excel.assert_called_once()
 
-def test_file_logging() -> None:
-    log_file = "test.log"
+        args, kwargs = mock_to_excel.call_args
+        filepath = args[0]
+        self.assertIn("Тест_Категория_на_15-03-2021.xlsx", filepath)
+        mock_logger.info.assert_called()
 
-    @log(log_file)
-    def test_func() -> int:
-        return 42
+        self.assertTrue(result.equals(self.df))
 
-    test_func()
+    @patch("src.decorators.os.makedirs")
+    @patch("src.decorators.pd.DataFrame.to_excel")
+    @patch("src.decorators.logger")
+    def test_export_to_excel_decorator_with_none_date(self, mock_logger, mock_to_excel, mock_makedirs):
+        @export_to_excel("../test_reports")
+        def dummy_func(data, category, end_date=None):
+            return data
 
-    with open(log_file, "r", encoding="utf-8") as f:
-        content = f.read()
-        assert "test_func успешно завершена. Результат: 42" in content
+        result = dummy_func(self.df, "Без даты", None)
 
+        mock_makedirs.assert_called_once()
+        mock_to_excel.assert_called_once()
+        mock_logger.info.assert_called_once()
 
-def test_error_logging(capsys: CaptureFixture[str]) -> None:
-    @log()
-    def error_func(a: int, b: int) -> None:
-        raise ValueError("Oops")
+        self.assertTrue(result.equals(self.df))
 
-    with pytest.raises(ValueError):
-        error_func(1, b=2)
+    @patch("src.decorators.os.makedirs")
+    @patch("src.decorators.pd.DataFrame.to_excel")
+    @patch("src.decorators.logger")
+    def test_default_export_to_excel(self, mock_logger, mock_to_excel, mock_makedirs):
+        @default_export_to_excel()
+        def dummy_func(data, category, end_date=None):
+            return data
 
-    captured = capsys.readouterr()
-    assert "error_func прервана." in captured.out
-    assert "Аргументы вызова: args: (1,), kwargs: {'b': 2}" in captured.out
-    assert "Ошибка: ValueError" in captured.out
+        result = dummy_func(self.df, "Категория", "10.01.2020")
+
+        mock_makedirs.assert_called_once_with("../reports", exist_ok=True)
+#        mock_to_excel.assert_called_once_with("../reports/report.xlsx", index=False)
+        expected_path = os.path.normpath("../reports/report.xlsx")
+        args, kwargs = mock_to_excel.call_args
+        actual_path = os.path.normpath(args[0])
+
+        assert actual_path == expected_path
+        assert kwargs == {'index': False}
+        mock_logger.info.assert_called_once()
+
+        self.assertTrue(result.equals(self.df))
+
+if __name__ == "__main__":
+    unittest.main()

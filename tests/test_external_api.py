@@ -1,45 +1,52 @@
-import os
-from unittest.mock import MagicMock, Mock, patch
+import pytest
+from unittest.mock import patch, MagicMock
+from src import external_api
 
-from src.external_api import calculate_transaction_amount, convert_currency
 
-
-@patch("requests.request")
-# @patch('os.getenv')
-# def test_convert_currency(mock_getenv, mock_request):
-def test_convert_currency(mock_request: MagicMock) -> None:
-    mock_request.return_value.json.return_value = {
-        "success": True,
-        "query": {"from": "EUR", "to": "RUB", "amount": 100},
-        "info": {"timestamp": 1746107344, "quote": 92.657461},
-        "result": 9265.7461,
+# -------- get_currencies_rates --------
+@patch("src.external_api.requests.request")
+@patch("src.external_api.logger")
+@patch("src.external_api.os.getenv", return_value="fake_api_key")
+def test_get_currencies_rates(mock_getenv, mock_logger, mock_request):
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "quotes": {
+            "USDRUB": 90.0,
+            "USDEUR": 1.2
+        }
     }
-    mock_getenv = Mock(return_value="012345")
-    os.getenv = mock_getenv
-    #    mock_getenv.return_value = '012345'
-    assert convert_currency("100", "EUR", "RUB") == 9265.7461
-    mock_request.assert_called_once_with(
-        "GET",
-        "https://api.apilayer.com/currency_data/convert?to=RUB&from=EUR&amount=100",
-        headers={"apikey": mock_getenv.return_value},
-        data={},
-    )
+    mock_request.return_value = mock_response
+
+    result = external_api.get_currencies_rates("USD")
+
+    assert isinstance(result, dict)
+    assert result["RUBUSD"] == 90.0
+    assert result["RUBEUR"] == round(90.0 / 1.2, 2)
+    mock_logger.info.assert_called()
 
 
-test = {
-    "id": 41428829,
-    "state": "EXECUTED",
-    "date": "2019-07-03T18:35:29.512364",
-    "operationAmount": {"amount": "8221.37", "currency": {"name": "USD", "code": "USD"}},
-    "description": "Перевод организации",
-    "from": "MasterCard 7158300734726758",
-    "to": "Счет 35383033474447895560",
-}
+# -------- get_symbols_rates --------
+@patch("src.external_api.requests.request")
+@patch("src.external_api.logger")
+@patch("src.external_api.os.getenv", return_value="fake_api_key")
+def test_get_symbols_rates(mock_getenv, mock_logger, mock_request):
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "data": [
+            {"symbol": "AAPL", "close": 190.5},
+            {"symbol": "AMZN", "close": 120.0}
+        ]
+    }
+    mock_request.return_value = mock_response
 
+    result = external_api.get_symbols_rates("AAPL,AMZN")
 
-@patch("src.external_api.convert_currency")
-def test_calculate_transaction_amount(mock_convert_currency: MagicMock) -> None:
-    mock_convert_currency.return_value = 9265.7461
-    assert calculate_transaction_amount(test, "RUB") == 9265.7461
+    assert isinstance(result, list)
+    assert result == [
+        {"stock": "AAPL", "price": 190.5},
+        {"stock": "AMZN", "price": 120.0}
+    ]
+    mock_logger.info.assert_called()
 
-    mock_convert_currency.assert_called_once_with(*("8221.37", "USD", "RUB"))

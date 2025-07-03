@@ -1,50 +1,69 @@
+import os
 from functools import wraps
-from time import time
-from typing import Any, Callable
+from typing import Optional, Callable
+from datetime import datetime
+import pandas as pd
+
+from src.logger import logger_setup
 
 
-def timing(function: Callable) -> Callable:
-    """Декоратор для определения времени выполнения функций"""
-
-    @wraps(function)
-    def time_wrapper(*args: Any, **kwargs: Any) -> Any:
-        start_timer = time()
-        result = function(*args, **kwargs)  # Вызов исходной функции
-        stop_timer = time()
-        print(f"Время выполнения функции: {function.__name__}", stop_timer - start_timer)
-        return result
-
-    return time_wrapper
+logger = logger_setup("decorators")
 
 
-def log(filename: str | None = None) -> Callable:
-    """Декоратор для логирования выполнения функций"""
-
-    def decorator(func: Callable) -> Callable:
+def export_to_excel(report_folder: str = "../reports"):
+    """Сохранение отчета в файле со сгенерированным названием"""
+    def decorator(func: Callable):
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            try:
-                result = func(*args, **kwargs)
-                success_message = f"{func.__name__} успешно завершена. Результат: {result}\n"
-            except Exception as e:
-                error_message = (
-                    f"{func.__name__} прервана. Ошибка: {type(e).__name__}. "
-                    f"Аргументы вызова: args: {args}, kwargs: {kwargs}\n"
-                )
-                if filename:
-                    with open(filename, "a", encoding="utf-8") as f:
-                        f.write(error_message)
-                else:
-                    print(error_message.strip())
-                raise e
+        def wrapper(data: pd.DataFrame, category: str, end_date: Optional[str] = None):
+            # Вызов оригинальной функции
+            result = func(data, category, end_date)
+
+            # Преобразуем дату
+            if end_date is None:
+                end_dt = datetime.now()
+            elif isinstance(end_date, str):
+                end_dt = pd.to_datetime(end_date, dayfirst=True)
             else:
-                if filename:
-                    with open(filename, "a", encoding="utf-8") as f:
-                        f.write(success_message)
-                else:
-                    print(success_message.strip())
-                return result
+                end_dt = end_date
 
+            # Формируем имя файла
+            safe_category = category.replace(" ", "_")  # Убираем пробелы
+            date_str = end_dt.strftime("%d-%m-%Y")
+            filename = f"{safe_category}_на_{date_str}.xlsx"
+            filepath = os.path.join(report_folder, filename)
+
+            # Создаём папку при необходимости
+            os.makedirs(report_folder, exist_ok=True)
+
+            # Сохраняем результат
+            result.to_excel(filepath, index=False)
+            logger.info(f"[✓] Отчёт сохранён в: {filepath}")
+
+            return result
         return wrapper
+    return decorator
 
+
+def default_export_to_excel(filename: str = "../reports/report.xlsx"):
+    """Сохранение отчета в файле названием по умолчанию"""
+    def decorator(func: Callable):
+        @wraps(func)
+        def wrapper(data: pd.DataFrame, category: str, end_date: Optional[str] = None):
+            # Вызов оригинальной функции
+            result = func(data, category, end_date)
+
+            # Формируем имя файла
+            report_folder = "../reports"
+            filename = "report.xlsx"
+            filepath = os.path.join(report_folder, filename)
+
+            # Создаём папку при необходимости
+            os.makedirs(report_folder, exist_ok=True)
+
+            # Сохраняем результат
+            result.to_excel(filepath, index=False)
+            logger.info(f"[✓] Отчёт сохранён в: {filepath}")
+
+            return result
+        return wrapper
     return decorator
